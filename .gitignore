@@ -1,0 +1,12 @@
+node_modules/
+.env
+
+# Build output
+dist/
+
+# WhatsApp Web JS session data
+.wwebjs_auth/
+.wwebjs_cache/
+
+# OS junk
+.DS_Store
