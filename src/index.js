@@ -1,68 +1,63 @@
 import wwebjs from 'whatsapp-web.js';
-const { Client, LocalAuth } = wwebjs; 
+const { Client, LocalAuth } = wwebjs;
 import qrcode from 'qrcode-terminal';
 import { connectDB } from './config/db.js';
+import { generateSmartResponse } from './services/ai.js';
+import { saveMessage, getHistory, checkUser, handleLongTermMemory } from './services/memory.js';
 
-// Import our new services
-import { generateSmartResponse } from './services/ai.js'; 
-import { saveMessage, getHistory, checkUser } from './services/memory.js';
-
-// 1. Connect to MongoDB
 connectDB();
 
-const sessions = {};
+// Simple processing queue to prevent race conditions
+const processingUsers = new Set();
 
-function createClient(sessionId) {
-    const client = new Client({
-        authStrategy: new LocalAuth({ clientId: sessionId }),
-        puppeteer: {
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            headless: true 
-        }
-    });
+const client = new Client({
+    authStrategy: new LocalAuth(),
+    puppeteer: { args: ['--no-sandbox'], headless: true }
+});
 
-    client.on('qr', (qr) => {
-        console.log(`\n📱 [${sessionId}] Scan QR Code:`);
-        qrcode.generate(qr, { small: true });
-    });
+client.on('qr', qr => qrcode.generate(qr, { small: true }));
+client.on('ready', () => console.log('🚀 Agent is live!'));
 
-    client.on('ready', () => {
-        console.log(`\n✅ [${sessionId}] Client Ready & Connected to DB!`);
-    });
+client.on('message', async (msg) => {
+    if (msg.isStatus || msg.fromMe || !msg.body) return;
 
-    client.on('message', async (msg) => {
-        try {
-            if (msg.isStatus || msg.fromMe || !msg.body) return;
+    const contact = await msg.getContact();
+    const userId = contact.number;
 
-            const contact = await msg.getContact();
-            const userId = contact.number; // Unique Phone Number
+    // 1. Concurrency Check: If already processing this user, wait or ignore
+    if (processingUsers.has(userId)) return; 
+    processingUsers.add(userId);
 
-            console.log(`📩 [${contact.pushname}]: ${msg.body}`);
+    try {
+        // 2. Load User Profile
+        const user = await checkUser(contact);
 
-            // A. Ensure User is in DB
-            await checkUser(contact);
+        // 3. Fetch Context
+        const history = await getHistory(userId);
 
-            // B. Get Previous Context
-            const history = await getHistory(userId);
+        // 4. Generate AI response with Summary context
+        const aiReply = await generateSmartResponse(history, msg.body, user.summary);
 
-            // C. Get AI Response (Passing history + new message)
-            const aiReply = await generateSmartResponse(history, msg.body);
+        // 5. Save and Respond
+        await saveMessage(userId, 'user', msg.body);
+        await saveMessage(userId, 'model', aiReply);
+        await client.sendMessage(msg.from, aiReply);
 
-            // D. Save the Interaction to DB
-            await saveMessage(userId, 'user', msg.body);       // Save User Input
-            await saveMessage(userId, 'model', aiReply);       // Save AI Output
+        // 6. Maintenance (Run in background)
+        handleLongTermMemory(user);
 
-            // E. Send Reply (Crash Safe)
-            await client.sendMessage(msg.from, aiReply);
-            console.log(`🤖 Replied: ${aiReply.substring(0, 30)}...`);
+    } catch (error) {
+        console.error("Critical Error:", error);
+    } finally {
+        // 7. Release the lock for this user
+        processingUsers.delete(userId);
+    }
+});
 
-        } catch (error) {
-            console.error(`❌ Message Error:`, error.message);
-        }
-    });
-
-    client.initialize();
-    return client;
-}
-
-createClient('main_bot');
+process.on('SIGINT', async () => {
+    console.log('\n👋 Shutting down gracefully...');
+    await client.destroy();
+    console.log('✅ Browser closed. Exiting.');
+    process.exit(0);
+});
+client.initialize();

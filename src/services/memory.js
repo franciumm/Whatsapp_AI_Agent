@@ -11,6 +11,9 @@ export async function saveMessage(userId, role, content) {
             role: role, // 'user' or 'model'
             message: content
         });
+          if (role === 'user') {
+        await User.findOneAndUpdate({ phone: userId }, { $inc: { messageCountSinceLastSummary: 1 } });
+    }
     } catch (error) {
         console.error("❌ Failed to save memory:", error.message);
     }
@@ -42,15 +45,33 @@ export async function getHistory(userId) {
  */
 export async function checkUser(contact) {
     try {
-        const exists = await User.findOne({ phone: contact.number });
-        if (!exists) {
-            await User.create({
+        let user = await User.findOne({ phone: contact.number });
+        if (!user) {
+            user = await User.create({
                 phone: contact.number,
                 name: contact.pushname || "Unknown"
             });
             console.log(`👤 New User Registered: ${contact.pushname}`);
         }
+        return user; // ✅ CRITICAL: Must return the user object
     } catch (error) {
         console.error("User check error:", error.message);
+        return null;
+    }
+}
+export async function handleLongTermMemory(user) {
+    if (user.messageCountSinceLastSummary >= 15) {
+        console.log(`🧹 Summarizing memory for ${user.name}...`);
+        const history = await getHistory(user.phone);
+        const newSummary = await summarizeHistory(history);
+        
+        if (newSummary) {
+            user.summary = newSummary;
+            user.messageCountSinceLastSummary = 0;
+            await user.save();
+            
+            // Optional: Delete logs older than the last 15 to keep DB clean
+            // await ChatLog.deleteMany({ phone: user.phone, timestamp: { $lt: someDate } });
+        }
     }
 }
