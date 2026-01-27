@@ -1,45 +1,56 @@
 import ChatLog from '../models/ChatLog.js';
 import User from '../models/User.js';
+import { summarizeHistory } from './ai.js';
 
 /**
- * Adds a message to the database
+ * ELITE SAVE: Ensures database integrity even if AI/Media fails
  */
 export async function saveMessage(userId, role, content) {
     try {
+        // Fallback: If content is empty/null, save a descriptive placeholder
+        const safeContent = (content && content.trim().length > 0) 
+            ? content 
+            : `[No text content for ${role}]`;
+
         await ChatLog.create({
             phone: userId,
-            role: role, // 'user' or 'model'
-            message: content
+            role: role, 
+            message: safeContent // This will now never be null/undefined
         });
-          if (role === 'user') {
-        await User.findOneAndUpdate({ phone: userId }, { $inc: { messageCountSinceLastSummary: 1 } });
-    }
+        
+        if (role === 'user' || role === 'user_voice') {
+            await User.findOneAndUpdate({ phone: userId }, { $inc: { messageCountSinceLastSummary: 1 } });
+        }
     } catch (error) {
-        console.error("❌ Failed to save memory:", error.message);
+        console.error("❌ Database Error:", error.message);
     }
 }
 
 /**
- * Retrieves the last 10 messages for context
+ * ELITE FETCH: Maps roles correctly for Gemini
  */
 export async function getHistory(userId) {
     try {
-        // Fetch last 10 messages, sorted by time
         const history = await ChatLog.find({ phone: userId })
             .sort({ timestamp: -1 })
             .limit(10);
         
-        // MongoDB returns them Newest->Oldest. We need Oldest->Newest for conversation flow.
-        return history.reverse().map(msg => ({
-            role: msg.role,
-            parts: [{ text: msg.message }] // Gemini format
-        }));
+        return history.reverse().map(msg => {
+            // Map our descriptive DB roles back to Gemini's strict roles
+            const validRole = (msg.role === 'user_voice' || msg.role === 'user') ? 'user' : 'model';
+            return {
+                role: validRole,
+                parts: [{ text: msg.message }] 
+            };
+        });
     } catch (error) {
-        console.error("❌ Failed to fetch history:", error.message);
+        console.error("❌ History Fetch Error:", error.message);
         return [];
     }
 }
 
+// ... rest of your file (checkUser, handleLongTermMemory)
+// ... keep checkUser and handleLongTermMemory as they are
 /**
  * Ensure user exists in DB
  */

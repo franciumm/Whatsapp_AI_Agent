@@ -1,78 +1,111 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Knowledge from '../models/Knowledge.js'; 
+import * as scheduler from './scheduler.js';    
 import 'dotenv/config';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const MODEL_NAME = "gemini-2.0-flash-exp"; 
 
-/**
- * 🔍 The Librarian: Search the Vector Database
- */
+const tools = [{
+    functionDeclarations: [
+        {
+            name: "get_meeting_types",
+            description: "Fetch the types of meetings available for booking."
+        },
+        {
+            name: "create_booking",
+            description: "Create a new calendar booking.",
+            parameters: {
+                type: "OBJECT",
+                properties: {
+                    eventTypeId: { type: "NUMBER" },
+                    start: { type: "STRING", description: "ISO 8601 format, e.g., 2025-01-27T10:00:00Z" },
+                    guestName: { type: "STRING" },
+                    guestEmail: { type: "STRING" }
+                },
+                required: ["eventTypeId", "start", "guestName", "guestEmail"]
+            }
+        }
+    ]
+}];
+
 async function getRelevantContext(query) {
     try {
         const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
         const embeddingRes = await model.embedContent(query);
-        const vector = embeddingRes.embedding.values;
-
-        // Perform Vector Search in MongoDB
-        const results = await Knowledge.aggregate([
-            {
-                "$vectorSearch": {
-                    "index": "vector_index", // Must match the name in your Atlas Screenshot
-                    "path": "embedding",
-                    "queryVector": vector,
-                    "numCandidates": 100,
-                    "limit": 3 // Retrieve the top 3 most relevant matches
-                }
+        const results = await Knowledge.aggregate([{
+            "$vectorSearch": {
+                "index": "vector_index",
+                "path": "embedding",
+                "queryVector": embeddingRes.embedding.values,
+                "numCandidates": 100,
+                "limit": 3
             }
-        ]);
-
-        if (results.length === 0) return "No specific internal documents found for this query.";
-
+        }]);
         return results.map(r => `[Source: ${r.metadata.source}]: ${r.content}`).join("\n\n");
-    } catch (error) {
-        console.error("❌ Vector Search Error:", error.message);
-        return "";
-    }
+    } catch (e) { return ""; }
 }
+// ... (keep imports and tools definitions)
 
-/**
- * 🧠 The Brain: Generate Response with Context
- */
-export async function generateSmartResponse(history, newMessage, userSummary) {
+export async function generateSmartResponse(history, newMessage, userSummary, mediaData = null) {
     try {
-        // 1. Ask the Librarian for info
-        const internalKnowledge = await getRelevantContext(newMessage);
+        const knowledge = await getRelevantContext(newMessage);
+        const nowInDubai = new Intl.DateTimeFormat('en-GB', {
+            dateStyle: 'full', timeStyle: 'long', timeZone: 'Asia/Dubai'
+        }).format(new Date());
 
         const model = genAI.getGenerativeModel({ 
-            model: MODEL_NAME,
-            systemInstruction: `You are a professional personal assistant. 
-            USER PROFILE: ${userSummary || "New user"}.
+            model: "gemini-2.0-flash-exp",
+            tools: tools,
+            systemInstruction: `You are an elite personal assistant in Dubai.
+            CURRENT TIME: ${nowInDubai}.
+            USER SUMMARY: ${userSummary || "New User"}.
+            KNOWLEDGE BASE: ${knowledge}.
             
-            KNOWLEDGE BASE INFO:
-            ${internalKnowledge}
-            
-            INSTRUCTIONS:
-            1. Use the KNOWLEDGE BASE INFO above to answer questions.
-            2. If the info isn't there, use your general knowledge but mention you didn't find it in your records.
-            3. Be concise and friendly.`
+            ADVICE: If the user sends audio, they expect a helpful text response in the same language (Arabic/English mix).`
         });
 
-        const chat = model.startChat({
-            history: history,
-            generationConfig: { maxOutputTokens: 1000 },
-        });
+        const chat = model.startChat({ history });
 
-        const result = await chat.sendMessage(newMessage);
-        const response = await result.response;
-        return response.text();
+        // Build Multi-part message for Gemini
+        let parts = [];
+        if (mediaData) {
+            parts.push({
+                inlineData: {
+                    data: mediaData.data,
+                    mimeType: mediaData.mimeType
+                }
+            });
+        }
+        parts.push({ text: newMessage });
+
+        const result = await chat.sendMessage(parts);
+        const response = result.response;
+
+        // Handle Potential Function Call (Scheduler)
+        const call = response.functionCalls()?.[0];
+        if (call) {
+            let toolRes;
+            if (call.name === "get_meeting_types") toolRes = await scheduler.getEventTypes();
+            if (call.name === "create_booking") toolRes = await scheduler.createBooking(call.args.eventTypeId, call.args.start, call.args.guestName, call.args.guestEmail);
+
+            const final = await chat.sendMessage([{
+                functionResponse: { name: call.name, response: { content: toolRes } }
+            }]);
+            
+            return { 
+                text: final.response.text(), 
+                bookingData: call.name === "create_booking" ? toolRes : null 
+            };
+        }
+
+        return { text: response.text(), bookingData: null };
 
     } catch (error) {
-        console.error("❌ Brain Error:", error.message);
-        return "I'm having a slight internal error. Could you try asking that again?";
+        console.error("AI processing error:", error);
+        return { text: "I'm sorry, I'm having trouble processing that right now.", bookingData: null };
     }
 }
-
 /**
  * 🧹 The Janitor: Summarize for Long-term Memory
  */
