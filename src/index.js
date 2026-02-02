@@ -10,16 +10,19 @@ const client = new Client({
     authStrategy: new LocalAuth({ 
         clientId: "main_bot",
         dataPath: "./sessions" 
-    }),
-    // Force a specific stable web version to minimize UI shifts
-    webVersionCache: {
-        type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1014111620-alpha.html',
-    },
+    }),        
+
     puppeteer: {
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }
+        headless: false ,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu'
+        ]    }
 });
 
 client.on('qr', (qr) => qrcode.generate(qr, { small: true }));
@@ -45,6 +48,25 @@ client.on('ready', async () => {
             }
         }, 500);
     });
+});
+
+client.on('authenticated', () => {
+    console.log('🔐 Client is authenticated!');
+});
+
+client.on('auth_failure', (msg) => {
+    console.error('❌ Authentication failure:', msg);
+});
+
+client.on('loading_screen', (percent, message) => {
+    console.log(`⏳ Loading: ${percent}% - ${message}`);
+});
+client.on('message_create', (msg) => {
+    if (msg.fromMe) {
+        console.log(`📤 I sent a message: ${msg.body}`);
+    } else {
+        console.log(`📩 Incoming message from ${msg.from}: ${msg.body}`);
+    }
 });
 
 client.on('message', async (msg) => {

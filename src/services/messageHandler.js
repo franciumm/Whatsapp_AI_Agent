@@ -11,6 +11,8 @@ export async function handleIncomingMessage(client, msg) {
 
     const contact = await msg.getContact();
     const userId = contact.number;
+    const chat = await msg.getChat();
+    await chat.sendStateTyping();
 
     if (processingUsers.has(userId)) return;
     processingUsers.add(userId);
@@ -35,7 +37,10 @@ export async function handleIncomingMessage(client, msg) {
          * as seen in the Client Class documentation. 
          * This avoids the 'markedUnread' property lookup entirely.
          */
+        await sleep(randomInt(2000,4000)); 
+
         await client.sendMessage(msg.from, text);
+        await chat.clearState();
 
         await saveMessage(userId, isVoice ? 'user_voice' : 'user', userText);
         await saveMessage(userId, 'model', text);
@@ -49,7 +54,19 @@ export async function handleIncomingMessage(client, msg) {
 
     } catch (error) {
         console.error("Logic Protection Error:", error.message);
+        await chat.clearState(); 
+
     } finally {
         processingUsers.delete(userId);
     }
+}
+
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
 }

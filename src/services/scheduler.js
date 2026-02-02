@@ -64,10 +64,9 @@ export async function getAvailableSlots(eventTypeId, start, end) {
                 start: start,  
                 end: end      
             },
-            headers: { 'cal-api-version': '2024-09-04' } // ✅ Matches Doc Version
+            headers: { 'cal-api-version': '2024-09-04' } 
         });
-        
-        // Cal.com returns slots grouped by date in the 'slots' object
+
         return response.data.data.slots || response.data.data;
     } catch (error) {
         console.error("Cal.com Slots Error:", error.response?.data || error.message);

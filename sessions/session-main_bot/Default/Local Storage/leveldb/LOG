@@ -1,0 +1,6 @@
+2026/02/02-17:03:44.370 3554 Reusing MANIFEST C:\Users\youse\Desktop\my-whatsapp-agent\sessions\session-main_bot\Default\Local Storage\leveldb/MANIFEST-000001
+2026/02/02-17:03:44.374 3554 Recovering log #4
+2026/02/02-17:03:44.376 3554 Reusing old log C:\Users\youse\Desktop\my-whatsapp-agent\sessions\session-main_bot\Default\Local Storage\leveldb/000004.log 
+2026/02/02-17:05:44.727 4924 Level-0 table #8: started
+2026/02/02-17:05:44.784 4924 Level-0 table #8: 13889 bytes OK
+2026/02/02-17:05:44.843 4924 Delete type=0 #4

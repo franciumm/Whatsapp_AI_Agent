@@ -4,28 +4,25 @@ import * as scheduler from './scheduler.js';
 import 'dotenv/config';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const MODEL_NAME = "gemini-2.0-flash-exp"; 
+const MODEL_NAME =    "gemini-3-pro-preview";
+
 
 const tools = [{
     functionDeclarations: [
-        {   name: "get_meeting_types", // 👈 The discovery tool
+        {   name: "get_meeting_types", 
             description: "Retrieve a list of available meeting types (Consultation, Intro, etc.) and their IDs."
         },
+
         {
-            name: "get_meeting_types",
-            description: "Fetch the types of meetings available for booking."
-        },
-        {
-            name: "get_available_slots", // ✅ NEW TOOL
+            name: "get_available_slots",
             description: "Check available time slots for a specific meeting type within a date range.",
             parameters: {
                 type: "OBJECT",
                 properties: {
                     eventTypeId: { type: "NUMBER" },
-                    start: { type: "STRING", description: "ISO 8601 start date (e.g. 2025-01-28)" },
                     end: { type: "STRING", description: "ISO 8601 end date (e.g. 2025-01-30)" }
                 },
-                required: ["eventTypeId", "start", "end"]
+                required: ["eventTypeId", "end"]
             }
         },
         {
@@ -55,64 +52,71 @@ export async function generateSmartResponse(history, newMessage, userSummary, me
         const knowledge = await getRelevantContext(newMessage);
         const now = new Date();
         const dubaiTimeStr = new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long', timeZone: 'Asia/Dubai' }).format(now);
-        const utcTimeStr = now.toISOString();
-
+        
         const model = genAI.getGenerativeModel({ 
             model: MODEL_NAME,
             tools: tools,
             systemInstruction: `You are an elite personal assistant in Dubai.
             CURRENT DUBAI TIME: ${dubaiTimeStr}.
-            CURRENT UTC ISO TIME: ${utcTimeStr}.
             USER PROFILE: ${userSummary || "New User"}.
             KNOWLEDGE BASE: ${knowledge}.
-            "If the user wants to book but you don't know which event type to use, call get_meeting_types first to find the correct ID."
             RULES:
-            1. BEFORE booking, always call get_available_slots to see what times are free.
-            2. To check slots for "today" or "tomorrow", use a 2-day range for the start and end parameters.
-            3. Present available slots to the user in Dubai time (+4).`
+            1. If you don't know the Event ID, call get_meeting_types first.
+            2. ALWAYS call get_available_slots before booking.
+            3. If the user asks to book, and you have the slot, call create_booking.
+            4. Keep responses concise and professional.`
         });
 
         const chat = model.startChat({ history });
         let parts = mediaData ? [{ inlineData: { data: mediaData.data, mimeType: mediaData.mimeType } }, { text: newMessage }] : newMessage;
 
+        // 1. Send initial message
         let result = await chat.sendMessage(parts);
         let response = result.response;
+        let bookingData = null;
 
-        // --- ENHANCED TOOL LOOP ---
-        const call = response.functionCalls()?.[0];
-        if (call) {
+        // 2. ✅ THE FIX: Loop to handle MULTIPLE tool calls
+        // The AI might want to check Types -> Then Slots -> Then Book.
+        while (response.functionCalls() && response.functionCalls().length > 0) {
+            const call = response.functionCalls()[0];
             let toolRes;
+
+            console.log(`🛠️ AI Requesting Tool: ${call.name}`);
+
             if (call.name === "get_meeting_types") {
                 toolRes = await scheduler.getEventTypes();
             } 
             else if (call.name === "get_available_slots") {
-                // ✅ Handle the new slots tool
-                toolRes = await scheduler.getAvailableSlots(call.args.eventTypeId, call.args.start, call.args.end);
+                toolRes = await scheduler.getAvailableSlots(call.args.eventTypeId,  new Date().toISOString(), call.args.end);
             }
             else if (call.name === "create_booking") {
-                                toolRes = await scheduler.createBooking(
+                toolRes = await scheduler.createBooking(
                     call.args.eventTypeId, 
                     call.args.start, 
                     call.args.guestName, 
                     call.args.guestEmail, 
                     call.args.notes
                 );
+                bookingData = toolRes; 
+                   
             }
 
-            const finalResult = await chat.sendMessage([{
+            result = await chat.sendMessage([{
                 functionResponse: { name: call.name, response: { content: toolRes } }
             }]);
-            
-            return { text: finalResult.response.text(), bookingData: call.name === "create_booking" ? toolRes : null };
+            response = result.response;
         }
 
-        return { text: response.text() || "I'm processing...", bookingData: null };
+        // 4. Return final text (fallback to empty string if nil)
+        const finalText = response.text() || "I completed the action.";
+        return { text: finalText, bookingData };
 
     } catch (error) {
         console.error("AI Error:", error);
-        return { text: "I'm having trouble checking my schedule. Can you try again?", bookingData: null };
+        return { text: "I'm encountering a temporary system error. Please try again.", bookingData: null };
     }
 }
+
 async function getRelevantContext(query) {
     try {
         const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
