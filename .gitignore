@@ -4,6 +4,7 @@ node_modules/
 # Build output
 dist/
 
+sessions/
 # WhatsApp Web JS session data
 .wwebjs_auth/
 .wwebjs_cache/
