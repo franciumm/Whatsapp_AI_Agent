@@ -119,19 +119,45 @@ export async function generateSmartResponse(history, newMessage, userSummary, me
 
 async function getRelevantContext(query) {
     try {
-        const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
-        const embeddingRes = await model.embedContent(query);
-        const results = await Knowledge.aggregate([{
-            "$vectorSearch": {
-                "index": "vector_index",
-                "path": "embedding",
-                "queryVector": embeddingRes.embedding.values,
-                "numCandidates": 100,
-                "limit": 3
-            }
-        }]);
-        return results.map(r => `[Source: ${r.metadata.source}]: ${r.content}`).join("\n\n");
-    } catch (e) { return ""; }
+        // Fetch all knowledge documents
+        const allKnowledge = await Knowledge.find({}).limit(50);
+        
+        if (allKnowledge.length === 0) return "";
+        
+        // Use AI to intelligently select relevant documents
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+        const knowledgeList = allKnowledge.map((doc, idx) => 
+            `[${idx}] Source: ${doc.metadata.source}\nContent: ${doc.content}`
+        ).join("\n\n");
+        
+        const selectionPrompt = `Given this user query: "${query}"
+        
+Select the most relevant knowledge documents (by index number) that could help answer or provide context. Be lenient with typos and focus on semantic meaning.
+        
+${knowledgeList}
+
+Respond with a JSON object: { "relevantIndices": [0, 2, 5], "reason": "brief explanation" }`;
+        
+        const result = await model.generateContent(selectionPrompt);
+        const responseText = result.response.text();
+        
+        // Parse AI's selection
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) return "";
+        
+        const { relevantIndices } = JSON.parse(jsonMatch[0]);
+        
+        // Build context from selected documents
+        return relevantIndices
+            .map(idx => allKnowledge[idx])
+            .filter(Boolean)
+            .map(doc => `[Source: ${doc.metadata.source}]: ${doc.content}`)
+            .join("\n\n");
+            
+    } catch (e) { 
+        console.error("Knowledge context error:", e);
+        return ""; 
+    }
 }
 
 
