@@ -12,23 +12,38 @@ in real time — no custom app, no new interface, no friction.
 User (WhatsApp)
 │
 ▼
+
 WhatsApp Webhook → Express.js Server
+
 │
 ▼
+
 Session Manager (MongoDB)
+
 └── loads conversation history
+
 │
 ▼
+
 Gemini AI Pipeline
+
 └── processes message with full context
+
 │
 ▼
+
 Response Handler
+
 ├── success → send reply via WhatsApp API
+
 └── failure → graceful fallback message
+
 │
 ▼
+
 User (WhatsApp) ← receives response
+
+
 ## Key Features
 
 - **Native WhatsApp integration** — no custom app needed
