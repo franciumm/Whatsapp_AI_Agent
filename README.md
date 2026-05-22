@@ -43,6 +43,8 @@ Response Handler
 
 User (WhatsApp) ← receives response
 
+<img width="2165" height="1624" alt="Whatsapp AI Agent (1)" src="https://github.com/user-attachments/assets/4906f6d3-831a-4673-8fcb-74a3ed60209c" />
+
 
 ## Key Features
 
