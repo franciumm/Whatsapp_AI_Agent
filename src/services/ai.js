@@ -3,6 +3,7 @@ import Knowledge from '../models/Knowledge.js';
 import * as scheduler from './scheduler.js';    
 import 'dotenv/config';
 
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const MODEL_NAME =    "gemini-3-pro-preview";
 
