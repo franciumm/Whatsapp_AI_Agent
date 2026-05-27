@@ -2,9 +2,13 @@ import wwebjs from 'whatsapp-web.js';
 const { Client, LocalAuth } = wwebjs;
 import qrcode from 'qrcode-terminal';
 import { connectDB } from './config/db.js';
+import { connectRedis } from './config/redis.js';
+import { createVectorIndex } from './services/embeddings.js';
 import { handleIncomingMessage } from './services/messageHandler.js';
 
 await connectDB();
+await connectRedis();
+await createVectorIndex();
 
 const client = new Client({
     authStrategy: new LocalAuth({ 

@@ -12,12 +12,13 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
+    "@google/genai": "^2.6.0",
     "axios": "^1.13.3",
     "dotenv": "^17.2.3",
     "mongoose": "^9.1.5",
     "pdf-parse": "^2.4.5",
     "qrcode-terminal": "^0.12.0",
+    "redis": "^5.12.1",
     "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#main",
     "xlsx": "^0.18.5"
   }

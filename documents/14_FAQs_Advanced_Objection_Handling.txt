@@ -1,0 +1,22 @@
+**Question:** This sounds too good to be true. What's the catch?
+**Answer:** That's a fair point. The reason the ROI seems so high is because we're solving operational workflows that are incredibly inefficient and costly when done manually. The "catch" is that it requires a genuine partnership. We provide the technology, the scraping infrastructure, and the white-glove setup, but we need your domain expertise to define the exact qualification criteria and data targets. Our confidence is so high that we offer a satisfaction guarantee for our founding partners. If you don't see the value we define together, we haven't done our job.
+
+/n/n
+
+**Question:** How are you different from a basic chatbot? / How are you better than a big CRM's native AI?
+**Answer:** A basic chatbot can answer simple FAQs, but it cannot execute complex data extraction or understand deep industry context. A big CRM is a generic tool you have to build out yourself. 
+- vs. Chatbots: Our AI is a dynamic agent. It uses your proprietary data to have intelligent, two-way conversations, qualify leads dynamically, and trigger background scraping tasks. It doesn't just give answers; it drives business action. 
+- vs. Big CRMs: We are a fully managed, 'done-for-you' engineering solution. You don't need any technical experience. We handle the custom backend integrations and maintenance, unlike a complex enterprise CRM that requires you to hire dedicated internal admins.
+
+/n/n
+
+**Question:** We've tried AI before and it was a disaster. Why would this be different?
+**Answer:** We hear that a lot. The most common AI failures stem from using generic models that hallucinate information, poor software integration, or unproven setups. Here's how we solve each: 
+1. **Accurate Info:** We use a strict RAG (Retrieval-Augmented Generation) architecture, meaning the AI is locked to the specific data and documents you provide. It cannot invent facts. 
+2. **Deep Integration:** We build custom API hooks as part of our white-glove setup to ensure it talks flawlessly with your existing tech stack. 
+3. **Zero Risk:** We remove the financial risk for our founding partners with our satisfaction guarantee so you can experience the operational reward safely.
+
+/n/n
+
+**Question:** That price seems high for our small business / agency. I don't know if we have the budget.
+**Answer:** I understand completely. It's helpful to frame Advancify not as a software subscription, but as an investment in a revenue-generating infrastructure. Think of it as hiring a digital operations team that works 24/7, never drops a lead, and executes perfect data scraping—all for a fraction of the cost of one entry-level hire. If the system captures just one or two major clients that would have been lost to slow response times, it pays for itself many times over. The goal is to make it a profit center, not a cost center.

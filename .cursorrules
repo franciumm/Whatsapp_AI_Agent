@@ -1,0 +1,8 @@
+# Skill Search Instructions
+
+Always search for available skills at the start of any conversation. 
+Look inside the `C:\Users\youse\.agents\skills` directory for any relevant skills that might help with the task.
+
+1. **Start of conversation**: Scan available skills in `C:\Users\youse\.agents\skills` (or any other configured skills directory) and pick the suitable ones.
+2. **Middle of conversation**: If a new type of task arises, search for more skills that might be relevant.
+3. **Usage**: Use whatever skills are needed to accomplish the task efficiently.

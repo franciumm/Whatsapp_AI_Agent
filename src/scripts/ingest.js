@@ -1,23 +1,18 @@
 import fs from 'fs';
 import path from 'path';
 import {PDFParse} from 'pdf-parse';
-import * as XLSX from 'xlsx'; // New dependency for Excel/CSV
-import { connectDB } from '../config/db.js';
-import Knowledge from '../models/Knowledge.js';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import * as XLSX from 'xlsx';
+import redisClient from '../config/redis.js';
+import { generateEmbedding, chunkText } from '../services/embeddings.js';
 import 'dotenv/config';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 async function extractText(filePath) {
     const ext = path.extname(filePath).toLowerCase();
     
-    // 1. Handle Notepad (.txt)
     if (ext === '.txt') {
         return fs.readFileSync(filePath, 'utf-8');
     }
 
-    // 2. Handle PDF (.pdf)
     if (ext === '.pdf') {
         const dataBuffer = fs.readFileSync(filePath);
         const uint8Array = new Uint8Array(dataBuffer);
@@ -25,13 +20,11 @@ async function extractText(filePath) {
         return data.text;
     }
 
-    // 3. Handle Excel/CSV (.xlsx, .csv)
     if (ext === '.xlsx' || ext === '.csv') {
         const workbook = XLSX.readFile(filePath);
         let fullContent = "";
         workbook.SheetNames.forEach(sheetName => {
             const sheet = workbook.Sheets[sheetName];
-            // Convert sheet to readable text/JSON string
             fullContent += XLSX.utils.sheet_to_txt(sheet) + "\n";
         });
         return fullContent;
@@ -42,11 +35,23 @@ async function extractText(filePath) {
 
 async function ingest() {
     try {
-        await connectDB();
-        const docsPath = path.resolve('./documents'); 
-        const files = fs.readdirSync(docsPath);
+        if (!redisClient.isOpen) {
+            await redisClient.connect();
+        }
 
-        const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+        const docsPath = path.resolve('./documents'); 
+        if (!fs.existsSync(docsPath)) {
+            console.error(`❌ Directory not found: ${docsPath}`);
+            process.exit(1);
+        }
+
+        const files = fs.readdirSync(docsPath);
+        if (files.length === 0) {
+            console.log(`ℹ️ No files found in ${docsPath}. Please place your FAQ txt files here.`);
+            process.exit(0);
+        }
+
+        let totalChunksStored = 0;
 
         for (const file of files) {
             const filePath = path.join(docsPath, file);
@@ -61,23 +66,30 @@ async function ingest() {
 
             console.log(`📖 Extracted ${rawText.length} characters from ${file}.`);
 
-            // Chunking (1000 chars per block)
-            const chunks = rawText.match(/[\s\S]{1,1000}/g) || [];
+            // Use our improved semantic chunking logic
+            const chunks = chunkText(rawText, 1500);
 
             for (let i = 0; i < chunks.length; i++) {
                 const chunk = chunks[i];
-                const result = await model.embedContent(chunk);
-                const embedding = result.embedding.values;
-
-                await Knowledge.create({
-                    content: chunk,
-                    metadata: { source: file, chunkIndex: i },
-                    embedding: embedding
-                });
+                console.log(`  Generating embedding for chunk ${i+1}/${chunks.length}...`);
+                
+                try {
+                    const embedding = await generateEmbedding(chunk);
+                    const id = `knowledge:${file.replace(/[^a-zA-Z0-9_-]/g, '')}:${i}`;
+                    
+                    await redisClient.json.set(id, '$', {
+                        source: file,
+                        content: chunk,
+                        embedding: embedding
+                    });
+                    totalChunksStored++;
+                } catch (embedError) {
+                    console.error(`  ❌ Failed to embed chunk ${i+1} of ${file}:`, embedError.message);
+                }
             }
             console.log(`✅ Finished: ${file} (${chunks.length} chunks)`);
         }
-        console.log("\n🚀 All files processed!");
+        console.log(`\n🚀 All files processed! Stored ${totalChunksStored} total chunks in Redis.`);
     } catch (error) {
         console.error("❌ Ingestion Error:", error);
     } finally {

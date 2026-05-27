@@ -1,0 +1,12 @@
+**Question:** Can I speak to a reference? / Who are your beta users?
+**Answer:** Since we are currently in our exclusive 'Founding Partner' stage, we don't have public references yet—and protecting our early partners' privacy and competitive advantage is paramount. This is the core of the opportunity: you get to be a part of the first group to leverage this tech in your sector. We replace the need for past references with our satisfaction guarantee, ensuring you have complete peace of mind and confidence in the value we deliver.
+
+/n/n
+
+**Question:** What are your security certifications? Are you ISO 27001 compliant?
+**Answer:** That's a very important question. As a rapidly growing tech company, we are building our entire infrastructure to meet ISO 27001 and SOC 2 standards from day one. Currently, all data is encrypted in transit and at rest using AES-256 encryption, we adhere to strict OWASP security principles, and our backend is hosted on secure, world-class cloud infrastructure (AWS/Google Cloud). Your corporate data security is our absolute top priority.
+
+/n/n
+
+**Question:** What happens if your system goes down? What's the backup plan?
+**Answer:** We maintain a 99.5% uptime target, but we have a robust failsafe protocol for the rare event

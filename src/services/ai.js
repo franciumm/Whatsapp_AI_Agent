@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import Knowledge from '../models/Knowledge.js'; 
 import * as scheduler from './scheduler.js';    
+import redisClient from '../config/redis.js';
+import { generateEmbedding } from './embeddings.js';
 import 'dotenv/config';
 
 
@@ -120,39 +121,34 @@ export async function generateSmartResponse(history, newMessage, userSummary, me
 
 async function getRelevantContext(query) {
     try {
-        // Fetch all knowledge documents
-        const allKnowledge = await Knowledge.find({}).limit(50);
+        if (!redisClient.isOpen) await redisClient.connect();
         
-        if (allKnowledge.length === 0) return "";
+        // 1. Generate embedding for query
+        const queryEmbedding = await generateEmbedding(query);
         
-        // Use AI to intelligently select relevant documents
-        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-        const knowledgeList = allKnowledge.map((doc, idx) => 
-            `[${idx}] Source: ${doc.metadata.source}\nContent: ${doc.content}`
-        ).join("\n\n");
-        
-        const selectionPrompt = `Given this user query: "${query}"
-        
-Select the most relevant knowledge documents (by index number) that could help answer or provide context. Be lenient with typos and focus on semantic meaning.
-        
-${knowledgeList}
+        // 2. Format embedding to buffer for Redis Search
+        const float32Array = new Float32Array(queryEmbedding);
+        const embeddingBuffer = Buffer.from(float32Array.buffer);
 
-Respond with a JSON object: { "relevantIndices": [0, 2, 5], "reason": "brief explanation" }`;
-        
-        const result = await model.generateContent(selectionPrompt);
-        const responseText = result.response.text();
-        
-        // Parse AI's selection
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) return "";
-        
-        const { relevantIndices } = JSON.parse(jsonMatch[0]);
-        
+        // 3. Perform Vector Search (Top 5 results)
+        const results = await redisClient.ft.search(
+            'idx:knowledge',
+            '*=>[KNN 5 @embedding $query_vec AS score]',
+            {
+                PARAMS: {
+                    query_vec: embeddingBuffer
+                },
+                RETURN: ['source', 'content', 'score'],
+                SORTBY: 'score',
+                DIALECT: 2
+            }
+        );
+
+        if (results.total === 0) return "";
+
         // Build context from selected documents
-        return relevantIndices
-            .map(idx => allKnowledge[idx])
-            .filter(Boolean)
-            .map(doc => `[Source: ${doc.metadata.source}]: ${doc.content}`)
+        return results.documents
+            .map(doc => `[Source: ${doc.value.source}]: ${doc.value.content}`)
             .join("\n\n");
             
     } catch (e) { 

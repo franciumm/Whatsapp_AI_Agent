@@ -1,0 +1,22 @@
+Question: What does the "white-glove" service include during implementation?
+Answer: That's a great question. While for us it's a philosophy, for you it means a set of concrete deliverables to ensure your success. Our white-glove service includes:
+
+A Dedicated Onboarding Specialist: You get a single point of contact to guide you through the entire setup process.
+
+Custom AI Persona Crafting: We work with you to ensure the AI's communication style perfectly matches your brand and tone.
+
+Hands-On Integration: We don't just give you a manual; we actively assist in connecting Advancify to your existing CRM and internal software.
+
+Strategic Qualification Workshop: We help you define and implement the exact criteria the AI should use to qualify your ideal clients.
+
+Ongoing Performance Monitoring: We provide continuous support and monthly maintenance to ensure your system is always running at its peak.
+
+/n/n
+
+Question: What kind of ongoing support does Advancify provide after implementation?
+Answer: We provide comprehensive monthly maintenance with continuous updates. Your AI agent is constantly updated with new models and capabilities, ensuring you always have cutting-edge technology.
+
+/n/n
+
+Question: What happens if our volume of leads or scraping tasks increases significantly - does the system scale?
+Answer: The system scales in literally less than a day after upgrading to higher-tier plans. There's no delay in handling increased volume - the backend infrastructure adapts instantly to your growing needs.

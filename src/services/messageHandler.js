@@ -1,5 +1,6 @@
 import { generateSmartResponse } from './ai.js';
 import { saveMessage, getHistory, checkUser, handleLongTermMemory } from './memory.js';
+import redisClient from '../config/redis.js';
 
 const processingUsers = new Set();
 
@@ -16,6 +17,22 @@ export async function handleIncomingMessage(client, msg) {
 
     if (processingUsers.has(userId)) return;
     processingUsers.add(userId);
+
+    // --- REDIS RATE LIMITING ---
+    try {
+        const rateLimitKey = `rate_limit:${userId}`;
+        const currentCount = await redisClient.incr(rateLimitKey);
+        if (currentCount === 1) {
+            await redisClient.expire(rateLimitKey, 60); // 1 minute window
+        }
+        if (currentCount > 15) { // Max 15 messages per minute
+            console.log(`🚫 Rate limited user: ${userId}`);
+            processingUsers.delete(userId);
+            return;
+        }
+    } catch (err) {
+        console.error("Redis rate limit error:", err);
+    }
 
     try {
         const user = await checkUser(contact);

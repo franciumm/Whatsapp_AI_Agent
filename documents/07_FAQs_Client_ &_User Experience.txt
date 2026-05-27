@@ -1,0 +1,17 @@
+Question: Can we review transcripts of the AI's conversations with potential clients?
+Answer: Yes. For full transparency and quality control, all conversation transcripts can be automatically saved to a designated Google Sheets file in your account, allowing you to review any interaction at any time.
+
+/n/n
+
+Question: How does the AI prevent booking consultations for services we don't offer?
+Answer: During the initial strategy call, we train the AI on the specific services and products your business provides. The lead qualification process is built around this information, so the AI knows not to book meetings for requests outside your scope, ensuring your sales team only receives highly relevant and qualified prospects.
+
+/n/n
+
+Question: What kind of analytics or reports can we see about the AI's performance?
+Answer: We provide a comprehensive analytics dashboard that tracks the key metrics for your client pipeline. This includes the total number of leads qualified, the number of meetings successfully booked, and an estimate of the time saved on data processing, giving you a clear view of your ROI.
+
+/n/n
+
+Question: Is the AI able to recognize and re-engage a returning visitor who didn't book a meeting on their first visit?
+Answer: Yes, this is a powerful feature we can enable for you. Upon request, our technical team can activate a re-engagement module for your AI assistant. This allows Layla to recognize returning visitors and initiate a tailored conversation to help them continue where they left off, significantly increasing the chances of conversion. This service is free to add; it just requires a request to our team to implement.

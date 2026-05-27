@@ -1,6 +1,7 @@
 import ChatLog from '../models/ChatLog.js';
 import User from '../models/User.js';
 import { summarizeHistory } from './ai.js';
+import redisClient from '../config/redis.js';
 
 /**
  * ELITE SAVE: Ensures database integrity even if AI/Media fails
@@ -21,6 +22,13 @@ export async function saveMessage(userId, role, content) {
         if (role === 'user' || role === 'user_voice') {
             await User.findOneAndUpdate({ phone: userId }, { $inc: { messageCountSinceLastSummary: 1 } });
         }
+        
+        // Invalidate history cache
+        try {
+            await redisClient.del(`history:${userId}`);
+        } catch (e) {
+            console.error("Redis cache invalidation error:", e);
+        }
     } catch (error) {
         console.error("❌ Database Error:", error.message);
     }
@@ -31,11 +39,20 @@ export async function saveMessage(userId, role, content) {
  */
 export async function getHistory(userId) {
     try {
+        const cacheKey = `history:${userId}`;
+        
+        // 1. Check Redis Cache
+        const cached = await redisClient.get(cacheKey);
+        if (cached) {
+            return JSON.parse(cached);
+        }
+
+        // 2. Fetch from MongoDB if not cached
         const history = await ChatLog.find({ phone: userId })
             .sort({ timestamp: -1 })
             .limit(10);
         
-        return history.reverse().map(msg => {
+        const formattedHistory = history.reverse().map(msg => {
             // Map our descriptive DB roles back to Gemini's strict roles
             const validRole = (msg.role === 'user_voice' || msg.role === 'user') ? 'user' : 'model';
             return {
@@ -43,6 +60,11 @@ export async function getHistory(userId) {
                 parts: [{ text: msg.message }] 
             };
         });
+
+        // 3. Save to Redis Cache (expire after 1 hour)
+        await redisClient.setEx(cacheKey, 3600, JSON.stringify(formattedHistory));
+        
+        return formattedHistory;
     } catch (error) {
         console.error("❌ History Fetch Error:", error.message);
         return [];

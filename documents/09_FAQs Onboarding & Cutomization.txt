@@ -1,0 +1,38 @@
+Category: Onboarding & Customization
+Question: How is the AI's persona (Layla) customized to match our brand?
+Answer: The customization of Layla is a collaborative process. During the onboarding, we hold a "persona workshop" where we gather examples of your communication style. This ensures Layla's tone is not just professional, but specifically reflects your brand's unique voice, making her a true extension of your team.
+
+/n/n
+
+Question: What does the process for defining our specific lead qualification criteria look like?
+Answer: We define your exact lead qualification criteria through a live, one-on-one strategy call. During this session, we work with you to map out the key questions, project types, and ideal client profiles. This ensures the AI qualifies leads with the same precision as your most experienced staff.
+
+/n/n
+
+Question: Can we update our qualification questions or the AI's knowledge base ourselves after the initial setup?
+Answer: Yes, absolutely. We provide you with the tools and access to update the AI's knowledge base and qualification criteria as your business needs evolve.
+
+/n/n
+
+Question: How long does it take for the AI to "learn" new information we provide?
+Answer: The learning process is instant. As soon as you update the knowledge base with new information, Layla can access and use it in real-time in her conversations with potential clients.
+
+/n/n
+
+Question: You mention CRM integration. Do you support industry-standard CRMs like HubSpot, Salesforce, or Zoho?
+Answer: We have pre-built integrations for many common CRM platforms, including HubSpot, Salesforce, and Zoho. If your business uses a specialized or custom CRM that is not on our preset list, our backend engineers can build a custom integration for a one-time initial setup cost.
+
+/n/n
+
+Question: How are client-uploaded documents handled to ensure security and compliance?
+Answer: Security is paramount. All client-uploaded documents and scraped datasets are stored directly on your own secure cloud account (like Google Drive or AWS). They are protected by end-to-end encryption, which means no one outside of your company—not even the team at Advancify—can ever access the content. Only your authorized staff and the AI agent serving your business have permission to view them.
+
+/n/n
+
+Question: Can the AI handle conversations in Arabic, including Egyptian dialects, or is it primarily English?
+Answer: Of course. The AI is fully capable of handling conversations in both English and Arabic, including understanding and responding in common Egyptian dialects to ensure a natural and comfortable experience for your local clients.
+
+/n/n
+
+Question: What happens if a client asks a question in the middle of the night that requires a human?
+Answer: In any situation where a potential client needs human attention, Layla is programmed to manage the handoff seamlessly. The AI will immediately send a notification to a designated human team member, alerting them that a client requires direct assistance, ensuring no critical request is ever missed.
