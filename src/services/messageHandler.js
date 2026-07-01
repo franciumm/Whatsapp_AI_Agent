@@ -36,6 +36,14 @@ export async function handleIncomingMessage(client, msg) {
 
     try {
         const user = await checkUser(contact);
+        
+        if (user.status === 'human' || user.status === 'pending_human') {
+            console.log(`⏸️ Bot paused for ${userId}. User is speaking with a human.`);
+            processingUsers.delete(userId);
+            await chat.clearState();
+            return;
+        }
+
         const history = await getHistory(userId);
 
         let mediaData = null;
@@ -46,7 +54,14 @@ export async function handleIncomingMessage(client, msg) {
         }
 
         const userText = msg.body || "Analyze this audio.";
-        const { text, bookingData } = await generateSmartResponse(history, userText, user.summary, mediaData);
+        const userProfile = {
+            name: user.name,
+            summary: user.summary,
+            language: user.language,
+            preferences: user.preferences,
+            accountReferences: user.accountReferences
+        };
+        const { text, bookingData, handoffRequested, handoffReason } = await generateSmartResponse(history, userText, userProfile, mediaData);
 
         /**
          * ✅ ELITE CHANGE:
@@ -67,7 +82,15 @@ export async function handleIncomingMessage(client, msg) {
             await client.sendMessage(adminId, `🚨 Booking Confirmed: ${bookingData.data.responses.name}`);
         }
 
-        handleLongTermMemory(user);
+        if (handoffRequested) {
+            user.status = 'pending_human';
+            user.escalationReason = handoffReason;
+            await user.save();
+            const adminId = client.info.wid._serialized;
+            await client.sendMessage(adminId, `🚨 HUMAN HANDOFF REQUESTED\nUser: ${user.phone}\nReason: ${handoffReason}`);
+        } else {
+            handleLongTermMemory(user);
+        }
 
     } catch (error) {
         console.error("Logic Protection Error:", error.message);

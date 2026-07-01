@@ -1,6 +1,6 @@
 import ChatLog from '../models/ChatLog.js';
 import User from '../models/User.js';
-import { summarizeHistory } from './ai.js';
+import { extractUserProfile } from './ai.js';
 import redisClient from '../config/redis.js';
 
 /**
@@ -94,17 +94,30 @@ export async function checkUser(contact) {
 }
 export async function handleLongTermMemory(user) {
     if (user.messageCountSinceLastSummary >= 15) {
-        console.log(`🧹 Summarizing memory for ${user.name}...`);
+        console.log(`🧹 Extracting memory for ${user.name}...`);
         const history = await getHistory(user.phone);
-        const newSummary = await summarizeHistory(history);
         
-        if (newSummary) {
-            user.summary = newSummary;
+        const currentProfile = {
+            summary: user.summary,
+            language: user.language,
+            preferences: user.preferences,
+            accountReferences: user.accountReferences
+        };
+        
+        const newProfile = await extractUserProfile(history, currentProfile);
+        
+        if (newProfile) {
+            user.summary = newProfile.summary || user.summary;
+            user.language = newProfile.language || user.language;
+            user.preferences = newProfile.preferences || user.preferences;
+            
+            if (Array.isArray(newProfile.accountReferences)) {
+                const mergedRefs = new Set([...user.accountReferences, ...newProfile.accountReferences]);
+                user.accountReferences = Array.from(mergedRefs);
+            }
+            
             user.messageCountSinceLastSummary = 0;
             await user.save();
-            
-            // Optional: Delete logs older than the last 15 to keep DB clean
-            // await ChatLog.deleteMany({ phone: user.phone, timestamp: { $lt: someDate } });
         }
     }
 }
